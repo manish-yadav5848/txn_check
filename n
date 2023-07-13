@@ -1,0 +1,18 @@
+delta_table = DeltaTable.forPath(spark, location)
+
+# Merge the changes into the Delta table
+writer = delta_table.alias("target")
+
+if merge_condition:
+    writer = writer.merge(df.alias("source"), merge_condition)
+
+if delete_condition:
+    writer = writer.merge(df.alias("source")).whenMatchedDelete(condition=delete_condition)
+
+if update_condition:
+    writer = writer.merge(df.alias("source")).whenMatchedUpdate(set=update_condition)
+
+if insert_condition:
+    writer = writer.merge(df.alias("source")).whenNotMatchedInsert(values=insert_condition)
+
+writer.execute()
