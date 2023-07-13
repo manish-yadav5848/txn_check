@@ -1,5 +1,9 @@
-delta_table = DeltaTable.forPath(spark, location)
 
+
+
+delta_table = DeltaTable.forPath(spark, location)
+merge_builder = DeltaMergeBuilder.forTable(spark)\
+    .target(delta_table.alias("target"))
 # Merge the changes into the Delta table
 writer = delta_table.alias("target")
 
