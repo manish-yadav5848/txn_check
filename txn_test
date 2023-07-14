@@ -12,3 +12,55 @@ if insert_condition:
 writer.execute()
 
 When there are more than one MATCHED clauses in a MERGE statement, only the last MATCHED clause can omit the condition.
+
+
+
+from delta.tables import DeltaTable
+
+def merge_and_write_delta_load(spark, df, database_name, table_name, merge_condition=None, delete_condition=None, update_condition=None, insert_condition=None, location=None, partition_cols=None):
+    """
+    Handles inserts, updates, and deletes in a Delta table using the merge function.
+
+    Parameters:
+        spark (SparkSession): The Spark session.
+        df (DataFrame): The DataFrame to write to the Delta table.
+        database_name (str): The name of the database that contains the Delta table.
+        table_name (str): The name of the Delta table to write the DataFrame to.
+        merge_condition (str): The condition to use in the merge operation.
+        delete_condition (str): The condition to use in the delete operation.
+        update_condition (str): The condition to use in the update operation.
+        insert_condition (str): The condition to use in the insert operation.
+        location (str): The file system location of the Delta table.
+        partition_cols (list): List of column names to partition the Delta table.
+
+    Returns:
+        None
+    """
+
+    # Create or load the Delta table
+    if location is not None:
+        create_or_load_delta_table(spark, database_name, table_name, location, df.schema, partition_cols)
+        delta_table = DeltaTable.forPath(spark, location)
+    else:
+        delta_table = DeltaTable.forName(spark, f"{database_name}.{table_name}")
+
+    # Merge the changes into the Delta table
+    writer = delta_table.alias("target")
+
+    if merge_condition:
+        writer = writer.merge(df.alias("source"), merge_condition)
+
+    if delete_condition:
+        if merge_condition:
+            delete_condition = f"{delete_condition} AND {merge_condition}"
+        writer = writer.whenMatchedDelete(condition=delete_condition)
+
+    if update_condition:
+        writer = writer.whenMatchedUpdate(condition=merge_condition, set=update_condition)
+
+    if insert_condition:
+        writer = writer.whenNotMatchedInsert(condition="NOT matched", values=insert_condition)
+
+    writer.execute()
+}
+
