@@ -1,0 +1,12 @@
+if update_condition and delete_condition:
+    # Prioritize update over delete
+    writer = writer.whenMatchedUpdate(set=update_condition).whenMatchedDelete(condition=delete_condition)
+elif delete_condition:
+    writer = writer.whenMatchedDelete(condition=delete_condition)
+elif update_condition:
+    writer = writer.whenMatchedUpdate(set=update_condition)
+
+if insert_condition:
+    writer = writer.whenNotMatchedInsert(values=insert_condition)
+
+writer.execute()
