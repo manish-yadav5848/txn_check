@@ -10,3 +10,5 @@ if insert_condition:
     writer = writer.whenNotMatchedInsert(values=insert_condition)
 
 writer.execute()
+
+When there are more than one MATCHED clauses in a MERGE statement, only the last MATCHED clause can omit the condition.
