@@ -64,3 +64,8 @@ def merge_and_write_delta_load(spark, df, database_name, table_name, merge_condi
     writer.execute()
 }
 
+
+Beneficiary Type = 1 set to ‘Individual’
+Beneficiary Type = 2 set to ‘Organization’
+Beneficiary Type = 3 set to ‘Trust’
+Beneficiary Type <> = 1,2,3 set to ‘Unknown’
