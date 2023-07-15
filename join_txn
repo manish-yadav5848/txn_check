@@ -1,0 +1,10 @@
+ON s.plan_number = t.plan_number
+             AND s.participant_id = t.participant_id
+             AND s.trade_date = t.trade_date
+             AND s.run_date = t.run_date
+             AND s.run_time = t.run_time
+             AND s.sequence_number = t.sequence_number
+             AND s.base_transaction_code = t.base_transaction_code
+             AND s.activity_type = t.activity_type
+             AND s.rev_code = t.rev_code
+             AND s.posting_process_counter = t.posting_process_counter
