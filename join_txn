@@ -8,3 +8,13 @@ ON s.plan_number = t.plan_number
              AND s.activity_type = t.activity_type
              AND s.rev_code = t.rev_code
              AND s.posting_process_counter = t.posting_process_counter
+
+
+
+
+        delta_table = DeltaTable.forPath(spark, location)
+        writer= delta_table.alias("target")
+        if merge_condition:
+            writer = writer.merge(df.alias("source"), merge_condition)
+            writer = writer.whenMatchedDelete(condition=delete_condition)
+            writer.execute()
