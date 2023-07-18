@@ -1,0 +1,4 @@
+    source_load_df = spark.read \
+        .options(**options) \
+        .text(
+        f"{os.getenv('STAGING_INPUT_PATH')}/{job_arguments.batch_date}/{job_arguments.source_name}/{job_arguments.file_name}/{job_arguments.file_segment_name}*")
