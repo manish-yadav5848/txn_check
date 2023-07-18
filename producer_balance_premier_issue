@@ -1,7 +1,7 @@
 select
     coalesce(M.rep_tax_id_ssn, '-9999') as rep_tax_id_ssn,
     coalesce(M.plan_number, '-9999') as plan_number,
-    coalesce(M.participant_id, '-9999') as participant_id,
+    coalesce(substring(M.participant_id,1,13), '-9999') as participant_id,
     M.producer_role_code,
     M.producer_role_type,
     cast(
@@ -108,7 +108,7 @@ from
                     m1.participant_id,
                     source_cycle_date
             ) M1 on coalesce(pr.plan_number, '-9999') = coalesce(M1.plan_number, '-9999')
-            and coalesce(pr.participant_id, '-9999') = coalesce(substring(M1.participant_id,1,13) '-9999')
+            and coalesce(pr.participant_id, '-9999') = coalesce(substring(M1.participant_id,1,13), '-9999')
             left outer join (
                 SELECT
                     plan_number,
@@ -142,4 +142,4 @@ from
                     participant_id
             ) M3 on coalesce(M3.plan_number, '-9999') = coalesce(M1.plan_number, '-9999')
             and coalesce(substring(M1.participant_id,1,13), '-9999') = coalesce(substring(M1.participant_id,1,13), '-9999')
-    ) M
+    ) M 
