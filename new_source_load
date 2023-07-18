@@ -10,3 +10,8 @@ options = {
 }
 
 STAGING_INPUT_PATH=/mnt/edp-work-ewr-mount/ewr/staging/unprocessed
+
+    delimiter_mapper = {
+        "psv": "|",
+        "csv": ","
+    }
