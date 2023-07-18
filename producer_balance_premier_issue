@@ -1,0 +1,145 @@
+select
+    coalesce(M.rep_tax_id_ssn, '-9999') as rep_tax_id_ssn,
+    coalesce(M.plan_number, '-9999') as plan_number,
+    coalesce(M.participant_id, '-9999') as participant_id,
+    M.producer_role_code,
+    M.producer_role_type,
+    cast(
+        coalesce(M.core_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as core_cash_value_amount,
+    cast(
+        coalesce(M.non_core_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as noncore_cash_value_amount,
+    cast(
+        coalesce(M.ee_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as ee_cash_value_amount,
+    cast(
+        coalesce(M.er_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as er_cash_value_amount,
+    cast(
+        coalesce(M.sdba_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as sdba_cash_value_amount,
+    cast(
+        coalesce(M.loan_cash_value_amount, 0) as DECIMAL(17, 2)
+    ) as loan_cash_value_amount,
+    cast(
+        coalesce(M.life_cash_value_amount_monthly, 0) as DECIMAL(17, 2)
+    ) as life_cash_value_amount_monthly,
+    M.life_valuation_date,
+    cast(
+        coalesce(M.ytd_contributions, 0) as DECIMAL(17, 2)
+    ) as ytd_contributions,
+    coalesce(M.source_cycle_date, current_date() -1) as source_cycle_date
+from
+    (
+        select
+            pr.rep_tax_id_ssn,
+            pr.plan_number,
+            pr.producer_role_code,
+            pr.producer_role_type,
+            pr.participant_id,
+            M1.source_cycle_date,
+            coalesce(M1.core_cash_value_amount, 0) as core_cash_value_amount,
+            coalesce(M1.ee_cash_value_amount, 0) as ee_cash_value_amount,
+            coalesce(M1.er_cash_value_amount, 0) as er_cash_value_amount,
+            coalesce(M1.ytd_contributions, 0) as ytd_contributions,
+            coalesce(M1.sdba_cash_value_amount, 0) as sdba_cash_value_amount,
+            coalesce(M2.total_loan_balance, 0) as loan_cash_value_amount,
+            cast(
+                M3.life_cash_value_amount_monthly as decimal(17, 2)
+            ) as life_cash_value_amount_monthly,
+            M3.life_valuation_date,(
+                coalesce(M2.total_loan_balance, 0) + coalesce(M1.sdba_cash_value_amount, 0) + coalesce(M3.life_cash_value_amount_monthly, 0)
+            ) as non_core_cash_value_amount
+        from
+            (
+                select
+                    rep_tax_id_ssn,
+                    concat_ws(
+                        ';',
+                        collect_set(distinct(nullif(producer_role_code_desc, '')))
+                    ) as producer_role_code,
+                    concat_ws(
+                        ';',
+                        collect_set(
+                            distinct(
+                                nullif(
+                                    case when producer_role_type = 'RIA/IAR' then producer_role_type else substring(producer_role_type, 0, 3) end,
+                                    ''
+                                )
+                            )
+                        )
+                    ) as producer_role_type,
+                    participant_id,
+                    plan_number
+                from
+                    producer
+                group by
+                    participant_id,
+                    plan_number,
+                    rep_tax_id_ssn
+            ) pr
+            inner join (
+                select
+                    m1.plan_number,
+                    m1.participant_id,
+                    coalesce(m1.source_cycle_date, current_date() -1) as source_cycle_date,
+                    sum(coalesce(m1.cash_value, 0)) as core_cash_value_amount,
+                    sum(coalesce(m1.ee_cash_value, 0)) as ee_cash_value_amount,
+                    sum(coalesce(m1.er_cash_value, 0)) as er_cash_value_amount,
+                    sum(coalesce(m1.ytd_contributions, 0)) as ytd_contributions,
+                    sum(coalesce(m1.brokerage_account_cash_value, 0)) as sdba_cash_value_amount
+                from
+                    (
+                        SELECt
+                            pc.participant_id,
+                            pc.plan_number,
+                            pc.source_cycle_date,
+                            coalesce(pc.cash_value_amount, 0) as cash_value,
+                            coalesce(pc.sdba_cash_value_amount, 0) as brokerage_account_cash_value,
+                            coalesce(pc.ytd_contributions, 0.00) as ytd_contributions,
+                            case when pc.cash_value_amount = null then 0 when pc.money_type_description = 'EE' then cash_value_amount end as ee_cash_value,
+                            case when pc.cash_value_amount = null then 0 when pc.money_type_description = 'ER' then cash_value_amount end as er_cash_value
+                        from
+                            participant_core_balance pc
+                    ) m1
+                group by
+                    m1.plan_number,
+                    m1.participant_id,
+                    source_cycle_date
+            ) M1 on coalesce(pr.plan_number, '-9999') = coalesce(M1.plan_number, '-9999')
+            and coalesce(pr.participant_id, '-9999') = coalesce(substring(M1.participant_id,1,13) '-9999')
+            left outer join (
+                SELECT
+                    plan_number,
+                    participant_id,
+                    sum(coalesce(t1.total_loan_balance, 0)) as total_loan_balance
+                from
+                    (
+                        SELECT
+                            coalesce(ppl.plan_number, '-9999') as plan_number,
+                            coalesce(ppl.participant_id, '-9999') as participant_id,
+                            case when ppl.source_system = 'PREMIER' then ppl.outstanding_principal_balance else loan_balance end as total_loan_balance
+                        from
+                            participant_loan ppl
+                    ) t1
+                group by
+                    plan_number,
+                    participant_id
+            ) M2 on M1.plan_number = M2.plan_number
+            and substring(M1.participant_id,1,13) =substring(M2.participant_id,1,13)
+            left outer join (
+                select
+                    plan_number,
+                    sum(coalesce(cash_value_amt, 0)) as life_cash_value_amount_monthly,
+                    participant_id,
+                    valuation_date as life_valuation_date
+                from
+                    participant_life_fund_monthly
+                group by
+                    plan_number,
+                    valuation_date,
+                    participant_id
+            ) M3 on coalesce(M3.plan_number, '-9999') = coalesce(M1.plan_number, '-9999')
+            and coalesce(substring(M1.participant_id,1,13), '-9999') = coalesce(substring(M1.participant_id,1,13), '-9999')
+    ) M
