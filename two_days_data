@@ -1,0 +1,7 @@
+windowSpec = Window.partitionBy(col("other_column")).orderBy(col("source_cycle_date").desc())
+
+# Add a rank column to the DataFrame based on 'source_cycle_date' in descending order within each partition
+df_ranked = df.withColumn("rank", rank().over(windowSpec))
+
+# Filter the DataFrame to get the records with rank 1 (highest) and 2 (second highest) within each partition
+result_df = df_ranked.filter((col("rank") == 1) | (col("rank") == 2))
