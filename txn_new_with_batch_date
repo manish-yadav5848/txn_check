@@ -27,3 +27,10 @@ def transform(spark: SparkSession, primary_key: list):
     transform_df=result_df.drop("batch_date")
 
     return transform_df
+
+
+{
+            "entityName": "txn",
+            "entityLoad": "full_load",
+            "primaryKeys": "activity_type,base_transaction_code,participant_id,plan_number,posting_process_counter,rev_code,run_date,run_time,trade_date,sequence_number"
+        },
